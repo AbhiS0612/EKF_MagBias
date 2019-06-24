@@ -1,0 +1,13 @@
+function A_mat=A(t,samp)
+% 2019-05-22 LLW create time varying A(t) 
+  
+  ae = interp1(samp.t,samp.acc,t)';   
+  we = interp1(samp.t,samp.ang,t)';
+
+  Z = zeros(3,3);
+  I = eye(3,3);
+
+  A_mat = [ Z,       I,  -J(ae),  J(we);...
+            Z,  -J(we),       Z,      Z;...
+            Z,       Z,       Z,      Z;...
+            Z,       Z,       Z,      Z];

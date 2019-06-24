@@ -1,0 +1,19 @@
+function xdot = sys(t,x,samp)
+
+% 2019-05-22 LLW ode45 function for \dot{x}(t) = A(t) * x(t), runs 12
+%                      copies at the same time
+% for computing transition matrix of bias + east estimator A(t) matrix
+
+
+  
+  A_mat = A(t,samp);
+
+  xdot = kron(eye(12), A_mat) * x;
+
+%  likely faster, but less transparent approach to compute same result
+%  for i = 0:11
+%    xdot(1+(i*12):12+(i*12),1) = A_mat * x(1+(i*12):12+(i*12),1);
+%   end
+  
+
+    

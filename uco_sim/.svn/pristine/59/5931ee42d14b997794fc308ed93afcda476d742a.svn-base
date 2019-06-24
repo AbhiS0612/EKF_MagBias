@@ -1,0 +1,31 @@
+function mat = obs_gram(samp,t0, t1, dt)
+% 2019-05-22 LLW for computing observability grammian  of bias + east
+% estimator
+
+  %default to integration timestep 
+  if( exist('dt') ~= 1)
+    dt = 0.1;
+  end
+
+  % numerically integrate, first order, rather crude
+  mat = zeros(12,12);
+  
+  for tau = t0+(0.5*dt):dt:t1
+    mat = mat + (obs_gram_integration_argument(samp,t0, tau) * dt);
+  end
+
+end
+
+
+function arg = obs_gram_integration_argument(samp,t0, t1)
+
+  % construct C
+  C = [eye(3) zeros(3,9)];  
+
+  % compute transition matrix
+  Phi = tm(samp,t0, t1);
+
+  arg = Phi' * C' * C * Phi;
+
+end
+
