@@ -6,7 +6,7 @@
  %% Notes
   % Soft and hard iron effects for magnetometer.
   % should correct error covaiance for angular measurements.
-  % System diverges if T is is slightly different from the identity
+  % 
   
 %% Add paths
 addpath '/home/abhis/Matlab/DSCL/dscl_matlab-master';
@@ -14,22 +14,23 @@ addpath '/home/abhis/Matlab/DSCL/andrew-matlab';
 addpath(genpath_nosvn_nogit_nohg('/home/abhis/Matlab/DSCL/dscl_matlab-master'));
 addpath(genpath_nosvn_nogit_nohg('/home/abhis/Matlab/DSCL/andrew-matlab'));
 addpath(genpath_nosvn_nogit_nohg('/home/abhis/Matlab/DSCL/uco_sim'));
-%  ms = read_microstrain('/home/abhis/Matlab/DSCL/log/2019_06_12_18_26.MST');
+%ms = read_microstrain('/home/abhis/Matlab/DSCL/log/2019_06_12_18_26.MST');
 
 %% Generate Simulated Data
 lat = 39.33; % degrees
-hz = 50;  % frequency of data generation  
+hz = 20;  % frequency of data generation  
 rate_d = hz; % rate of discretization 
-t_end = 100; % seconds
+t_end = 400; % seconds
 ts = 1/rate_d; %discretization time interval
 
 %set biases 
 bias.ang = [0;0;0];
 bias.acc = [0;0;0];
 bias.mag = [.1; 0.05; -.1];
-%T_bias=[.95,0,0; 0,1.1,0;0,0,1.05];
-T_bias=[.9,0,0; 0,1.1,0;0,0,1];
-%T_bias=[1,0,0; 0,1,0; 0,0,1];
+% must be symmetric
+T_bias=[ 0.9    0.1   -0.2
+         0.1    1.1    0.0
+        -0.2    0.0    1.0];
 
 ms = gen_samples(lat, hz, t_end, bias, T_bias);
 
@@ -49,12 +50,14 @@ time = ms.t';
  C = [eye(3) zeros(3,9)];
  
  % Kalman Filter Setup
- q1 = [1 1 1]*0.0001;
- q2 = [1 1 1]*0.00001;
- q3 = [1 1 1 1 1 1]*0.00001;
- 
+ % Note that values for Q and R are dependent on the sampling rate.
+ q1 = [1 1 1]*0.000002;
+ q2 = [1 1 1]*0.0000001;
+ q3 = [1 1 1 1 1 1]*0.0001^2;
  Q = diag([q1 q2 q3]);
- R = eye(3)*0.001;
+ 
+ %std = [0.001 0.001 0.001]
+ R = eye(3)*0.001^2;
  
  errT = ones(1,6)*0.01;
  err = [0.01 0.01 0.01 0.1 0.1 0.1 errT]; %expected initial error.
@@ -63,12 +66,13 @@ time = ms.t';
  %% Kalman Filter implematation
  s(1) = norm(Sig);
  tic
+ 
  for t = 2:(runTime*rate_d)  
-     %x(:,t) = Al*x(:,t-1);
+     x(:,t) = Al*x(:,t-1);
      
-     % find state using ode solver: faster way to do this?
-     [~, x_vec] = ode45(@(tx,x_vec) sysS(tx,x_vec,ms),((t-1):.2:t)/rate_d,x(:,t-1));
-     x(:,t) = x_vec(end,:)';
+%     % find state using ode solver: slower, but slightly more accurate
+%       [~, x_vec] = ode45(@(tx,x_vec) sysS(tx,x_vec,ms),((t-1):.2:t)/rate_d,x(:,t-1));
+%       x(:,t) = x_vec(end,:)';
      
      Sig = Al*Sig*Al' + Q;
      K = (Sig*C')/(C*Sig*C' + R);
@@ -113,11 +117,11 @@ time = ms.t';
  
  %% Display Results
  disp 'Computed mean biases:';
- b_mean = mean(x(4:6,length(x)-1000:length(x))')'
+ b_mean = mean(x(4:6,length(x)-100:length(x))')'
  disp 'True bias:';
  bias.mag
  disp 'Computed mean T matrix:';
- Ts = mean(x(7:12,floor(.5*length(x)):length(x))');
+ Ts = mean(x(7:12,floor(length(x)-100):length(x))');
  T_mean = [Ts(1:3)' [Ts(2) Ts(4) Ts(5)]' [Ts(3) Ts(5) Ts(6)]']
  disp 'True T matrix:';
  T_bias

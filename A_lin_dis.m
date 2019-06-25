@@ -32,6 +32,5 @@
               zeros(9,12)];
           
   A_mat = expm(A_mat_c * ts); 
-          
  end
  

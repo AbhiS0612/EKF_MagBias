@@ -14,9 +14,11 @@ acc = zeros(3,num);
 samp.E = zeros(3,num);
 
 
-w_sig = 0.2;%6.32 * 10^(-3)*pi/180;  % measured 1775, units are rad/sec
+%w_sig = 6.32 * 10^(-3)*pi/180;  % measured 1775, units are rad/sec
 a_sig = 0.0037;            % measured 1775, units are g, not m/s^2
-m_sig = 0.002; % units are gauss - should this be std dev?
+
+w_sig = 5 * 10^(-4); % roughly what was measured from experiments with MST, sketchy run though
+m_sig = 0.001;       % measured from experiments, sketchy run though
 
 % generate a_n
 r = 6371*1000;
@@ -32,10 +34,9 @@ w_E_n = Ren'*w_E_e;
 
 %fileID = fopen('/home/spiels/log/sim/kvh/sim5.KVH','w');
 fileMST = fopen('/home/abhis/Matlab/DSCL/log/sim1.MST','w');
-filePhins = fopen('/home/abhis/Matlab/DSCL/log/sim1.INS','w');
+%filePhins = fopen('/home/abhis/Matlab/DSCL/log/sim1.INS','w');
 
 %T=[.95,0,0; 0,1.1,0;0,0,1.05]; %ijrr, soft iron T
-%T=[.5,0,0;0,1.5,0;0,0,.8];
 
 %T=eye(3);
 
@@ -48,8 +49,8 @@ for i=1:num
         Rni{i + 1} = Rni{i}*expm(skew(w_veh)*dt);
     end
 
-    ang(:,i) = w_veh + Rni{i}'*w_E_n + bias.ang + w_sig*randn(3,1);
-    acc(:,i) = Rni{i}'*a_n + bias.acc + a_sig*randn(3,1);%+skew(w_veh)*[0.1;0;0];
+    ang(:,i) = w_veh + Rni{i}'*w_E_n + bias.ang + normrnd(0,w_sig,[3,1]);
+    acc(:,i) = Rni{i}'*a_n + bias.acc + normrnd(0,a_sig,[3,1]);%+skew(w_veh)*[0.1;0;0];
     samp.acc_nv(:,i) = acc(:,i);
     samp.E(:,i) = Rni{i}'*[0;1;0]*norm(skew(w_E_n)*a_n);
     samp.D(:,i) = Rni{i}'*a_n;
@@ -57,7 +58,7 @@ for i=1:num
     samp.w_E(:,i) = Rni{i}'*w_E_n;
     samp.w_E_n(:,i) = Rni{i}'*[w_E_n(1);0;0];
     %T=eye(3);
-    samp.mag(:,i) = T*Rni{i}'*m_n + m_sig*randn(3,1) + bias.mag;
+    samp.mag(:,i) = T*Rni{i}'*m_n + normrnd(0,m_sig,[3,1]) + bias.mag;
     samp.mag_true(:,i) = Rni{i}'*m_n;
     %samp.mag(:,i) = Rni{i}'*m_n + m_sig*randn(3,1) + bias.mag;
     
@@ -70,7 +71,7 @@ for i=1:num
     rpy_phins = samp.att(:,i)*180/pi;%rot2rph(R);
     %fprintf(fileID,'IMU_RAW, %.40f,%.40f,%.40f, %.35f,%.35f,%.35f,%f,%f,%f, 0, 0, %.30f,0,1,1,1,1,1,1, %f,%f,%f,%f,%f,%f,%f,%f,%f,%.40f,%.40f,%.40f \n',ang(1,i),ang(2,i),ang(3,i),acc(1,i),acc(2,i),acc(3,i),samp.mag(1,i),samp.mag(2,i),samp.mag(3,i),t(i),R(1,1),R(1,2),R(1,3),R(2,1),R(2,2),R(2,3),R(3,1),R(3,2),R(3,3),rpy_phins(1),rpy_phins(2),rpy_phins(3));
     %fprintf(fileID,'KVH 0/0/0 0:0:0 %f %f %.40f,%.40f,%.40f, %.35f,%.35f,%.35f,%f,%f,%f,0,%d,%f,%f,1,1,1,1,1,1 \n',t(i),t(i),ang(1,i),ang(2,i),ang(3,i),acc(1,i),acc(2,i),acc(3,i),samp.mag(1,i),samp.mag(2,i),samp.mag(3,i),mod(i,128),t(i),t(i));
-    fprintf(filePhins,'INS 0/0/0 0:0:0 %f %f %f,0,0,0,0,0,0,%f,%f,%f,0,0 \n',t(i),t(i),t(i),rpy_phins(1),rpy_phins(2),rpy_phins(3));
+   % fprintf(filePhins,'INS 0/0/0 0:0:0 %f %f %f,0,0,0,0,0,0,%f,%f,%f,0,0 \n',t(i),t(i),t(i),rpy_phins(1),rpy_phins(2),rpy_phins(3));
     fprintf(fileMST,'MST 0/0/0 0:0:0 %f %f %f,%f,%f,%f,%f,%f,%f,%f,%f,%f,1 \n',t(i),t(i),t(i),ang(1,i),ang(2,i),ang(3,i),acc(1,i),acc(2,i),acc(3,i),samp.mag(1,i),samp.mag(2,i),samp.mag(3,i));
 
 end
@@ -105,7 +106,8 @@ function w = get_w(t)
 
 %w = [sin(t/20)/20+cos(t/10)/15;sin(t/10)/40+cos(t/30)/25;cos(t/60)/10]; % (1000hz) sim4 (sim3 in IJRR paper)
 
-w = [(cos(t/7.2)*2 +sin(t/3));  (-cos(t/5.1));  (cos(t/11))*2];
+%w = [(cos(t/7.2)*2 +sin(t/3));  (-cos(t/5.1));  (cos(t/11))*2];
+w = [0;0;cos(t/11)*2];
 
 
 if t>2500
