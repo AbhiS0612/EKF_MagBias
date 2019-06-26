@@ -1,8 +1,12 @@
-function samp = gen_samples(lat,hz,t_end,bias,T)
-
+%% Function to generate simulated data for MST, KVH, PHINS
+ % Author: Andrew Spielvogel
+ % 
+ % 06/25/19: Modified by Abhi Shah
+ 
+function samp = gen_samples(lat,hz,t_end,bias,T,w_max)
 dt = 1/hz;
 t= 0:dt:t_end;
-num = size(t,2);
+num = length(t);
 
 lat = lat*pi/180;
 
@@ -17,11 +21,11 @@ samp.E = zeros(3,num);
 %w_sig = 6.32 * 10^(-3)*pi/180;  % measured 1775, units are rad/sec
 a_sig = 0.0037;            % measured 1775, units are g, not m/s^2
 
-w_sig = 5 * 10^(-4); % roughly what was measured from experiments with MST, sketchy run though
-m_sig = 0.001;       % measured from experiments, sketchy run though
+w_sig = 5 * 10^(-4);  % roughly what was measured from experiments with MST
+m_sig = 1 * 10^(-3);  % roughly what was measured from experiments with MST
 
 % generate a_n
-r = 6371*1000;
+r = 6371*1000; %earth radius in m
 Ren = [-sin(lat),0,-cos(lat);0,1,0;cos(lat),0,-sin(lat)];
 a_e = [cos(lat);0;sin(lat)] - (15.04*pi/180/3600)^2*cos(lat)*[r;0;0]/9.81;
 a_n = Ren'*a_e;
@@ -38,12 +42,9 @@ fileMST = fopen('/home/abhis/Matlab/DSCL/log/sim1.MST','w');
 
 %T=[.95,0,0; 0,1.1,0;0,0,1.05]; %ijrr, soft iron T
 
-%T=eye(3);
-
 for i=1:num
-
     % get w_v, Rsn
-    w_veh = get_w(t(i));
+    w_veh = get_w(t(i),w_max);
 
     if i~=num
         Rni{i + 1} = Rni{i}*expm(skew(w_veh)*dt);
@@ -84,12 +85,10 @@ samp.Rni = Rni;
 samp.bias = bias;
 
 
-function w = get_w(t)
+function w = get_w(t, w_max)
 
 %%%% IROS2018
-
 % w = [cos(t/2)/20;sin(t/5)/15;-cos(t/30)/10]*0;
-% 
 % w = [cos(t/50)/25;-sin(t/9)/7*0;cos(t/10)/6]; %exp1
 % w = [cos(t/50)/25*0;-sin(t/9)/7*0;cos(t/10)/6]; %exp2
 % w = [cos(t/50)/100;-sin(t/9)/7*0;cos(t/10)/6]; %exp3
@@ -97,7 +96,6 @@ function w = get_w(t)
 % w = [cos(t/20)/55*0;-sin(t/5)/30*0;cos(t/30)/5]; %exp5 10hz optimization
 
 %w = [cos(t/20)/20;sin(t/50)/32;cos(t/60)/10];
-
 %w = [0;0;cos(t/50)/15]; % 6(10hz) sim0
 %w = [0;0;0]; % (1000hz) sim1
 %w = [0;0;cos(t/60)/10]; % (1000hz) sim2
@@ -106,10 +104,17 @@ function w = get_w(t)
 
 %w = [sin(t/20)/20+cos(t/10)/15;sin(t/10)/40+cos(t/30)/25;cos(t/60)/10]; % (1000hz) sim4 (sim3 in IJRR paper)
 
-%w = [(cos(t/7.2)*2 +sin(t/3));  (-cos(t/5.1));  (cos(t/11))*2];
-w = [0;0;cos(t/11)*2];
+%%%% abhi's sims
 
+%w = zeros(3,1);    %no movement, used to check noise
+%w = [0;0;cos(t/11)*2];   %not PE, can't converge on z
 
-if t>2500
-    %w=0*[0;0;sin(t/20)/10];
+%w = [(cos(t/7.2)*2 +sin(t/3));  (-cos(t/5.1));  (cos(t/11))*2]; % works well
+
+w = [cos(t/2)  * w_max(1); 
+     cos(t/3)  * w_max(2);
+     cos(t/5)  * w_max(3)];
+
+end
+
 end
