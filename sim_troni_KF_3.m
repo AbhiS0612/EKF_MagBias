@@ -1,11 +1,15 @@
 %% Simulation of Giancarlo's algorithm for estimatating sensor bias without
  % knowledge of the vehicles true attitude (i.e using angular rates).
- % Method: Kalman Filter
+ % Method: Extended Kalman Filter
  % 06-13-19:  CREATED by Abhi Shah
+ % 06-27-19:  Modified to 
  
  %% Notes
   % Soft and hard iron effects for magnetometer.
-  % should correct error covaiance for angular measurements.
+  % The T matrix often settles to the wrong value -- WHY??
+  %   - this is primarily an issue for the diagonal terms. the off
+  %   diagonals see to converge to the right values.
+  % System sometimes diverges when Q matrix is chosen larger than R
   % 
   
 %% Add paths
@@ -20,18 +24,18 @@ addpath(genpath_nosvn_nogit_nohg('/home/abhis/Matlab/DSCL/uco_sim'));
 lat = 39.33; % degrees
 hz = 20;  % frequency of data generation  
 rate_d = hz; % rate of discretization 
-t_end = 1000; % seconds
+t_end = 500; % seconds
 ts = 1/rate_d; %discretization time interval
-w_max = [0.5,0.5,0.5]; %set max ang. vel. for excitation
+w_max = [0.5,0.3,0.5]; %set max ang. vel. for excitation
 
 %set biases 
-bias.ang = [3;2;-4]*10^(-3);
+bias.ang = [0;0;0];
 bias.acc = [0;0;0];
 bias.mag = [.1; 0.05; -.1];
 % must be symmetric
-T_bias=[ 0.9    0.1   -0.2
-         0.1    1.15    0.0
-        -0.2    0.0    1.0];
+T_bias=[ 1.1    0.1    0.0
+         0.1    1.0    0.0
+         0.0    0.0    1.0];
 
 ms = gen_samples(lat, hz, t_end, bias, T_bias, w_max);
 
@@ -52,15 +56,25 @@ time = ms.t';
  w_pos = zeros(size(w));
  % Kalman Filter Setup
  % Note that values for Q and R are dependent on the sampling rate.
- q1 = [1 1 1]*0.000002;
- q2 = [1 1 1]*0.0000001;
- q3 = [1 1 1 1 1 1]*0.0001^2;
+ 
+% These values seem to work pretty well @ 20Hz 
+%  q1 = [1 1 1]*10^(-9);
+%  q2 = [1 1 1]*10^(-9);
+%  q3 = [1 1 1 1 1 1]*10^(-10);
+%  Q = diag([q1 q2 q3]);
+%  
+%  stdev = [1 1 1]*2*10^(-4);
+%  R = stdev.^2;
+ 
+ q1 = [1 1 1]*10^(-9);
+ q2 = [1 1 1]*10^(-9);
+ q3 = [1 1 1 1 1 1]*10^(-10);
  Q = diag([q1 q2 q3]);
  
- %std = [0.001 0.001 0.001]
- R = eye(3)*0.001^2;
- 
- errT = ones(1,6)*0.01;
+ stdev = [1 1 1]*2*10^(-4);
+ R = stdev.^2;
+
+errT = ones(1,6)*0.1;
  err = [0.01 0.01 0.01 0.1 0.1 0.1 errT]; %expected initial error.
  Sig = err'*err;
  

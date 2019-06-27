@@ -1,7 +1,8 @@
 %% Function to generate simulated data for MST, KVH, PHINS
  % Author: Andrew Spielvogel
  % 
- % 06/25/19: Modified by Abhi Shah
+ % 06/25/19: Modified by Abhi Shah, updated std devs. for MST.
+ %           Added the ability control the max angular velocity.
  
 function samp = gen_samples(lat,hz,t_end,bias,T,w_max)
 dt = 1/hz;
@@ -19,10 +20,10 @@ samp.E = zeros(3,num);
 
 
 %w_sig = 6.32 * 10^(-3)*pi/180;  % measured 1775, units are rad/sec
-a_sig = 0.0037;            % measured 1775, units are g, not m/s^2
-
-w_sig = 5 * 10^(-4);  % roughly what was measured from experiments with MST
-m_sig = 1 * 10^(-3);  % roughly what was measured from experiments with MST
+%a_sig = 0.0037;            % measured 1775, units are g, not m/s^2
+a_sig = 8 * 10^(-4);  % MST @ 20Hz
+w_sig = 3 * 10^(-4);  % MST @ 20Hz
+m_sig = 2 * 10^(-4);  % MST @ 20Hz
 
 % generate a_n
 r = 6371*1000; %earth radius in m
@@ -109,11 +110,14 @@ function w = get_w(t, w_max)
 %w = zeros(3,1);    %no movement, used to check noise
 %w = [0;0;cos(t/11)*2];   %not PE, can't converge on z
 
-%w = [(cos(t/7.2)*2 +sin(t/3));  (-cos(t/5.1));  (cos(t/11))*2]; % works well
-
-w = [cos(t/2)  * w_max(1); 
-     cos(t/3)  * w_max(2);
-     cos(t/5)  * w_max(3)];
+% realistic, & works well with chosen Q and R for sim_troni_KF_3
+% w = [cos(t*3)  * w_max(1); 
+%      cos(t*2)  * w_max(2);
+%      cos(t/12) * w_max(3)];
+ 
+ w = [cos(t*3)  * w_max(1); 
+     cos(t*2)  * w_max(2);
+     cos(t/12) * w_max(3)];
 
 end
 

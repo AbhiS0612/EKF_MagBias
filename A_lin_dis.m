@@ -1,4 +1,7 @@
- %% Function to return linearized A matrix in discrete time
+%% Function to return linearized A matrix in discrete time
+  % This function is to be used for with sim_troni_KF_3 (12 states)
+  % Modified from (2019-05-22 LLW)
+  
  function A_mat=A_lin_dis(t,samp,s0,ts) % needs current state
 % 2019-05-22 LLW create time varying A(t) 
     
