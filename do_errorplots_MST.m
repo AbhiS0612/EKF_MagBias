@@ -1,19 +1,28 @@
 %% Microstrain Error Testing
 addpath '/home/abhis/Matlab/DSCL/dscl_matlab-master';
 addpath(genpath_nosvn_nogit_nohg('/home/abhis/Matlab/DSCL/dscl_matlab-master'));
-ms = read_microstrain('/log/microstrain/2019_06_25_17_26.MST');
+log_file_path = '/log/microstrain/2019_06_27_15_06.MST';
+ms = read_microstrain(log_file_path);
+%ms = read_microstrain('/home/abhis/Matlab/DSCL/log/sim1.MST');
 
 %% Plot Histograms 
-bins = 100;
+i = 7;
+bins = 30;
+log_file = '2019\_06\_27\_15\_06.MST';
+secs = 104.915; % duration of trial
+Hz = 1000.255; % run section above to print precise Hz
 
-% plot_title = 'MST Accelerometer Data from 2019\_06\_25\_14\_09.MST, sampled @ 100Hz';
-% histplots(ms.acc, bins, plot_title);
+plot_title = sprintf('MST Accelerometer Data from %s sampled at %.3fHz (%.3fsecs)', log_file, Hz, secs);
+spec_acc{i} = histplots(ms.acc, bins, plot_title);
+print('-fillpage','hist_acc_1000','-dpdf')
 
-plot_title = 'MST Angular Velocity Data from 2019\_06\_25\_14\_09.MST, sampled @ 100Hz';
-histplots(ms.ang, bins, plot_title);
+plot_title = sprintf('MST Angular Velocity Data from %s sampled at %.3fHz (%.3fsecs)', log_file, Hz, secs);
+spec_ang{i} = histplots(ms.ang, bins, plot_title);
+print('-fillpage','hist_ang_1000','-dpdf')
 
-plot_title = 'MST Magnetometer Data from 2019\_06\_25\_14\_09.MST, sampled @ 100Hz';
-histplots(ms.mag, bins, plot_title);
+plot_title = sprintf('MST Magnetometer Data from %s sampled at %.3fHz (%.3fsecs)', log_file, Hz, secs);
+spec_mag{i} = histplots(ms.mag, bins, plot_title);
+print('-fillpage','hist_mag_1000','-dpdf')
 
 % %% Plot Raw Data
 % ms.t = ms.t - ms.t(1);
