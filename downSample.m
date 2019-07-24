@@ -1,24 +1,33 @@
-%% Down sample readings; quick bad method
- function [t w z] = downSample(t0, w0, z0, r0, r1)
- step = floor(r0/r1);
- j = 1;
- sum_t = 0;
- sum_w = 0;
- sum_z = 0;
- 
- for i = 1:length(t0)
-        sum_t = sum_t + t0(i,:);
-        sum_w = sum_w + w0(i,:);
-        sum_z = sum_z + z0(i,:);
-        
-        if(mod(i,step) == 0)
-          t(j,:) = sum_t/step;
-          w(j,:) = sum_w/step;
-          z(j,:) = sum_z/step;
-          j = j+1;
-          sum_t = 0;
-          sum_w = 0;
-          sum_z = 0;
-        end
+%% Down sample data from microstrain or kvh by averaging. 
+% Since the downsampled rate must be a diviser of the original sampling rate,
+% this function simply requires the downsampling factor, rather than the
+% required rate.
+% the function returns a struct, with average time, acc, ang, mag values
+% function struct1 = downSample(struct0, req_factor)
+%  Input
+%   struct0:    struct of microstrain or kvh data
+%   req_factor: required averaging factor (must be a positive integer)
+%  Output
+%   struct1:    struct with fields t, ang, acc, mag containing the
+%   downsampled data
+%
+% e.g. if the data in struct0 is at 99.5hz, and req_factor is 10, stuct1
+% will contain data at 9.95hz
+
+ function st1 = downSample(st0, rf)
+ k = 1;
+  for i = 1:rf:(length(st0.t)-rf)
+    st1.t(k,:) = mean(st0.t(i:(i+rf-1)));
+    st1.acc(k,:) = mean(st0.acc(i:(i+rf-1),:));
+    st1.ang(k,:) = mean(st0.ang(i:(i+rf-1),:));
+    st1.mag(k,:) = mean(st0.mag(i:(i+rf-1),:));
+    k = k+1;
   end
+  
+  % Print info
+    n  = (length(st0.t) - mod(length(st0.t),rf));
+    dt = st0.t(n) - st0.t(1);
+    n = n/rf;
+    hz = n/dt;
+    fprintf(1,' Down sampled data has %f sec of data, %d data records, %f Hz\n', dt, n, hz);
  end
