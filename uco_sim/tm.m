@@ -5,7 +5,9 @@ function PHI=tm(samp,t_start,t_stop,s0)
   
 % handle special case 
 if (t_start == t_stop)
-  PHI = eye(12);
+   PHI = eye(6);
+  %PHI = eye(12);
+  %PHI = eye(15);
   return;
 end
 
@@ -21,10 +23,14 @@ end
 
 % construct 144 element initial condition - concatenate
 % 12 unit vectors, each all zeros except 1 in the ith element
-x0 = my_stack(eye(12));  
+ x0 = my_stack(eye(6));
+%x0 = my_stack(eye(12));  
+%x0 = my_stack(eye(15));
 
 % solve ODE
 [~, x] = ode45(@(t,x) sys(t,x,samp,s0),t_start:dt:t_stop, x0);
 
-PHI = my_unstack(x(end,:)',12);  
-%PHI = eye(12);
+PHI = my_unstack(x(end,:)',6);
+%PHI = my_unstack(x(end,:)',12);
+%PHI = my_unstack(x(end,:)',15);
+%PHI = eye(15);

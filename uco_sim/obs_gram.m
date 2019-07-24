@@ -9,7 +9,9 @@ function mat = obs_gram(samp,t0,t1,dt,s0)
   
   dt_s = 0.01; %time step for ODE to propagate the state.
   
-  mat = zeros(12,12);
+   mat = zeros(6);
+  %mat = zeros(12);
+  %mat = zeros(15);
   s = s0;
  
   for tau = t0+(0.5*dt):dt:t1
@@ -26,7 +28,9 @@ end
 function arg = obs_gram_integration_argument(samp,t0,t1,s0)
 
   % construct C - constant, not time varying
-  C = [eye(3) zeros(3,9)];  
+   C = [eye(3) zeros(3,3)];
+  %C = [eye(3) zeros(3,9)];  
+  %C = [eye(3) zeros(3,12)];  
 
   % compute transition matrix
   Phi = tm(samp,t0,t1,s0); %compute transition matrix (a function of state)

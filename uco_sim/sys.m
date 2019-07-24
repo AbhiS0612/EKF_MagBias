@@ -7,8 +7,9 @@ function xdot = sys(t,x,samp,s0) % also needs current state
   %s = [0.6946 0.1560 0.2994 0 0 0 1.0000 0 0 1.0000 0 1.0000]';
   
   A_mat = A(t,samp,s0); %needs current state
-
-  xdot = kron(eye(12), A_mat) * x;
+   xdot = kron(eye(6), A_mat) * x;
+  %xdot = kron(eye(12), A_mat) * x;
+  %xdot = kron(eye(15), A_mat) * x;
 
 %  likely faster, but less transparent approach to compute same result
 %  for i = 0:11

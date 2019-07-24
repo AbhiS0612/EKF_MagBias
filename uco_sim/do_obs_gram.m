@@ -1,5 +1,6 @@
 % 2019-05-23 LLW script file to make obs grammian plots
 
+%% Generate Simulated Data
 samp = read_microstrain('/home/abhis/Matlab/DSCL/log/sim1.MST');
 samp.t = samp.t-samp.t(1);
 t0 = 0;
@@ -13,7 +14,8 @@ t1 = t0+t1;
 t = t0:dt:t1;
 
 %initial condition, column vector
-s0 = [samp.mag(1,:) [0 0 0] [1 0 0 1 0 1]]';
+ s0 = [samp.mag(1,:) [1 1 1]]';
+%s0 = [samp.mag(1,:) [0 0 0] [1 0 0 1 0 1]]';
 
 % function is vectorized
 w_e_mat = interp1(samp.t,samp.ang,t);
@@ -59,7 +61,7 @@ legend('a_e_1', 'a_e_2', 'a_e_3');
 title('a_e vs time');
 
 % compute observability grammian
-fprintf(1,'Computing Observability Grammian ftom t0=%.1f to t1=%.1f with dt=%.02f:\n', t0, t1, dt);
+fprintf(1,'Computing Observability Grammian from t0=%.1f to t1=%.1f with dt=%.02f:\n', t0, t1, dt);
 OG = obs_gram(samp,t0, t1, dt, s0);
 
 fprintf(1,'Rank of Observability Grammian=%d\n', rank(OG));
