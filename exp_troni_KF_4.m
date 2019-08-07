@@ -1,159 +1,189 @@
 %% Experimental Evalution of sim_troni_KF_4
- % Minor changes have been made from sim_troni_KF_4. 
+ % The final interation of code for implementing an EKF for estimating
+ % magnetometer bias (hard and soft iron) as well as angular velocity bias.
+ % This code can be used for either MST or KVH data. Several additional
+ % function files are required to run this script.
  % 07-24-19:  CREATED by Abhi Shah
-
- %% Notes
-  % The MST data doesnt come in at the sepcified rate - need to account for
-  % that.
-  % This code has been written specifically for the MST
-  % 
+ % 08-07-19:  Last modified by Abhi Shah
+ 
+%% Notes
+  % Tested code with simulation data.
+  % This code is better then previous versions, because it uses
+  % interpolation of measured data while running the filter. This lets us
+  % run the filter at any desired rate, independent of the rate of data
+  % collection. 
+  % Tested with experimental data - seems to work well.
+  
 %% Add paths
 addpath '/home/abhis/Matlab/DSCL/dscl_matlab-master';
 addpath '/home/abhis/Matlab/DSCL/andrew-matlab'; 
 addpath(genpath_nosvn_nogit_nohg('/home/abhis/Matlab/DSCL/dscl_matlab-master'));
 addpath(genpath_nosvn_nogit_nohg('/home/abhis/Matlab/DSCL/andrew-matlab'));
-log_file_path = '/log/microstrain/2019_07_23_16_01.MST';
+log_file_path = '/log/microstrain/2019_08_02_16_27.MST';
+%log_file_path = '/log/kvh/2019_08_02_16_27.KVH';
+log_file_path_p = '/log/phins/2019_08_02_16_27.INS';
+
+%% Generate Simulated Data (for comparison / testing)
+% lat = 39.33; % degrees
+% hz = 19.8;  % frequency of data generation (be sure to choose appropriate noise specs)  
+% t_end = 1000; % seconds
+% w_max = [0,0.22,.2]; %set max ang. vel. for excitation. set x and y terms to zero for 2D case.
+% 
+% %set biases 
+% bias.ang = 0*[3;2;1]*10^(-3);  %values chosen based on experiment @ 20Hz
+% bias.acc = [0;0;0];
+% bias.mag = [.05; 0.; .15];
+% % must be symmetric, also: assume that T is scaled such that T(1,1) = +1
+% Ts = [1,.1,0,1.1,0,1];
+% bias.T= [Ts(1:3)' [Ts(2) Ts(4) Ts(5)]' [Ts(3) Ts(5) Ts(6)]']; 
+% %bias.T = eye(3);
+% ms = gen_samples(lat, hz, t_end, bias, w_max);
 
 %% Read data
 ms = read_microstrain(log_file_path);
-%One might wish to downsample the data. Do that here, using downSample.m
-ds_factor = 5; % downSample factor
-ms = downSample(ms, ds_factor);
-ms.t = ms.t-ms.t(1);
-w = ms.ang';
-z = ms.mag';
-time = ms.t';
- 
- %% System Set up
- data_recs = length(time); %number of data records
- runTime = time(end); %total runtime in seconds
- ts = data_recs/runTime;  %frequency of data recs (Hz) 
- %x = zeros(15, data_recs); %uncomment this if program runs slow
+phins = read_phins_imbat(log_file_path_p);
+
+% Post Processing (optional)
+%  ms1 = read_kvh(log_file_path);
+%  ds_factor = 50; % downSample factor
+%  ms1 = downSample(ms1, ds_factor);
+
+% trunate data range (for large data samples)
+% sp = 20;  %start percentage
+% ep = 50;  %end percentage
+% n = length(ms1.t);
+% ms.mag = ms1.mag((sp*n/100):(ep*n/100),:);
+% ms.ang = ms1.ang((sp*n/100):(ep*n/100),:);
+% ms.t = ms1.t((sp*n/100):(ep*n/100),:);
+
+start_time = ms.t(1);  %record unix start time
+ms.t = ms.t-ms.t(1);  %start time set to 0.
+w = ms.ang';  % ang vel. measurement
+z = ms.mag';  % mag measurement
+time = ms.t'; % time measurement
+
+%% System and Filter Set up
+ filter_rate = 20;   % (Hz)  
+ ts = 1/filter_rate; % (s)
+ filter_time = 0:ts:floor(time(end))-ts;  
+ filter_points = filter_rate * floor(time(end)); %number of data records
+ ft = filter_time(1);
  x(:,1) = [z(:,1); 0;0;0; 1;0;0;1;0;1; 0;0;0];  %initialize state 
- Al = A_lin_15(1,ms,x(:,1)); %linearized discrete time A
- Ald = expm(Al*ts);
+ Al = A_lin_15_exp(filter_time(1),ms,x(:,1)); %linearized A
+ Ald = expm(Al*ts);  %discretized Al
  Bld = B_dis(Al, ts); %linear discrete time B
- u(:,1) = f_x(1,ms,x(:,1)) - Al*x(:,1);
+ u(:,1) = f_x(ft,ms,x(:,1)) - Al*x(:,1);  %psedo-control input
  C = [eye(3) zeros(3,12)];
- w_pos = zeros(size(w));
  
- % Kalman Filter Setup
- q1 = [1 1 1]*10^(-8);
- q2 = [1 1 1]*2*10^(-13);
- q3 = [0 1 1 1 1 1]*10^(-12); % q3(1) must be set to 0
+% Process Covariance Matrix
+
+ % MST @20hz
+ q1 = [1 1 1]*10^(-9);
+ q2 = [1 1 1]*2*10^(-10);
+ q3 = [0 1 1 1 1 1]*10^(-10); % q3(1) must be set to 0
  q4 = [1 1 1]*2*10^(-12);
  Q = diag([q1 q2 q3 q4]);
  
- stdev = [1 1 1]*2*10^(-4);
+ %random testing
+%  q1 = [1 1 1]*10^(-9);
+%  q2 = [1 1 1]*2*10^(-10);
+%  q3 = [0 1 1 1 1 1]*10^(-10); % q3(1) must be set to 0
+%  q4 = [1 1 1]*2*10^(-12);
+%  Q = diag([q1 q2 q3 q4]);
+ 
+% Noise Covariance Matrix
+ stdev = [1.7 1.7 3]*10^(-4);  %MST @20hz
+ %stdev = [1 1 1]*10^(-3);  %random testing
  R = stdev.^2; 
- err_mag = stdev;
- err_magb = [1 1 1]*10^(-1);
- err_T = [0 1 1 1 1 1]*10^(-1);
- err_angb = [1 1 1]*10^(-2);
- err = [err_mag err_magb err_T err_angb]; %expected initial error - should the first 3 be the same as R?
+ 
+% Initial Error Covariance Matrix 
+ err_mag = stdev*10;
+ err_magb = [1 1 1]*10^(-2);
+ err_T = [0 1 1 1 1 1]*10^(-2);
+ err_angb = [1 1 1]*10^(-3);
+ err = [err_mag err_magb err_T err_angb];
  Sig = err'*err;
+ 
  %% Kalman Filter implematation
  tic
- for i = 2:(data_recs)/2 
-   % prediction of next state: x(:,i) = Ald*x(:,i-1)+ Bld*u(:,t-1);
-   % this step can also be done using ode45. 
+ for i = 2:filter_points
+    % prediction of next state: x(:,i) = Ald*x(:,i-1)+ Bld*u(:,t-1);
     x(:,i) = Ald*x(:,i-1) + Bld*u(:,i-1);
     Sig = Ald*Sig*Ald' + Q;
-   
+    
+% find state using ode solver: way slower, and oscillates a lot, WHY??
+%      tspan = [time(i-1) time(i)];
+%      [t, x_vec] = ode45(@(t,x_vec) sysS_15(t,x_vec,ms), tspan, x(:,i-1));
+%      x(:,i) = x_vec(end,:)';  
+     
     %kalman gain calculation 
-     disp (i);
      K = (Sig*C')/(C*Sig*C' + R);
      
     % update equations 
-     x(:,i) = x(:,i) + K*(z(:,i) - C*x(:,i));
+     % get interpolated measurement at current time and mag measurement
+     ft = filter_time(i);
+     z_m = interp1(time, z', ft)';
+     x(:,i) = x(:,i) + K*(z_m - C*x(:,i));
      Sig = (eye(15) - K*C)*Sig;
     
-     %recompute A and B matrices
-     Al  = A_lin_15(i,ms,x(:,i)); %linearized A 
-     Ald = expm(Al*ts);
+     %recompute A, B and pseudo-control input
+     Al  = A_lin_15_exp(ft,ms,x(:,i)); %linearized A 
+     Ald = expm(Al*ts); %discretized Al
      Bld = B_dis(Al, ts); %linear discrete time B
-     u(:,i) = f_x(i,ms,x(:,i)) - Al*x(:,i);
-     
-     % numericl integration to find angular position
-     w_pos(:,i) = w_pos(:,i-1) + w(:,i-1)*ts;
+     u(:,i) = f_x(ft,ms,x(:,i)) - Al*x(:,i);
   
+     % Display status of the filter 
      if ~mod(i,100)
-        str = sprintf('Filter status: %i percent',floor((i*100)/(data_recs)));
+        str = sprintf('Filter status: %i percent',floor((i*100)/(filter_points)));
         disp(str);
      end
  end
  toc
+
+%% Plot Estimated Biases
+figure
+plot(filter_time, x(4:6,:));
+title 'Hard Iron Bias';
+ylabel 'bias terms';
+legend ('x','y','z');
+xlabel 'time (s)';
+grid minor;
+
+figure
+plot(filter_time, x(7:12,:));
+title 'Soft-Iron Bias'
+ylabel 'elememts of symmetric T matrix'
+legend ('a','b','c','d','e','f');
+xlabel 'time (s)';
+grid minor;
  
-% %%  figure(1)
-% %  hold on;
-% % % subplot(2,1,1)
-% %  plot(time(1:length(x)), x(1,:), time(1:length(x)), x(2,:), time(1:length(x)), x(3,:));
-% %  legend ('x','y','z');
-% %  title 'State estimate';
-% %  grid minor;
-% %  subplot(2,1,2)
-% %  plot(time(1:length(x)),z(:,1:length(x)));
-% %  legend('x','y','z');
-% %  xlabel 'time (s)';
-% %  title 'Mag Measurements';
-% 
-% figure 
-% plot(ms.t,(w_pos).*180/pi);
-% title 'Orientation of the vehicle';
-% legend ('x','y','z');
-% ylabel 'angular displacement (degrees)'; 
-% xlabel 'time(s)';
-% grid minor;
-% 
-% 
-% figure
-% plot(time(1:length(x)), x(4,:), time(1:length(x)), x(5,:), time(1:length(x)), x(6,:));
-% title 'Error: Hard Iron Bias';
-% ylabel 'bias terms';
-% legend ('x','y','z');
-% xlabel 'time (s)';
-% %ylim([-0.1 0.1]);
-% %xlim([400 500]);
-% grid minor;
-%   
-% figure
-% plot(time(1:length(x)), x(7:12,:));
-% title 'Error: Soft-Iron Bias'
-% ylabel 'elememts of symmetric T matrix'
-% legend ('a','b','c','d','e','f');
-% ylim([-0.1 0.1]);
-% %xlim([400 500]);
-% xlabel 'time (s)';
-% grid minor;
-%  
-% figure
-% plot(time(1:length(x)), x(13,:), time(1:length(x)), x(14,:), time(1:length(x)), x(15,:));
-% title 'Error: Angular Velocity Bias';
-% legend ('x','y','z');
-% ylim([-0.01 0.01]);%*10^(-1));
-% %xlim([400 500]);
-% ylabel 'bias terms';
-% xlabel 'time (s)';
-% grid minor;
-%  
-% %  
-% % %  %% Display Results
-% %  disp 'Computed mean biases:';
-% %  b_mean = mean(x(4:6,length(x)-100:length(x))')'
-% %  disp 'True bias:';
-% %  bias.mag
-% %  disp 'Computed mean T matrix:';
-% %  Ts = mean(x(7:12,floor(length(x)-100):length(x))');
-% %  T_mean = [Ts(1:3)' [Ts(2) Ts(4) Ts(5)]' [Ts(3) Ts(5) Ts(6)]']
-% %  disp 'True T matrix:';
-% %  bias.T
+figure
+plot(filter_time, x(13:15,:));
+title 'Angular Velocity Bias';
+legend ('x','y','z');
+ylabel 'bias terms';
+xlabel 'time (s)';
+grid minor;
 
+%% Print Results
+ disp 'Computed biases:';
+ b = mean(x(4:6,length(x)-100:length(x))')'
+ disp 'Computed T matrix:';
+ Ts = mean(x(7:12,floor(length(x)-100):length(x))');
+ T = [Ts(1:3)' [Ts(2) Ts(4) Ts(5)]' [Ts(3) Ts(5) Ts(6)]']
+ 
+%% Plot Attitude Error
+ mst.mag = (T\(ms.mag' - b));
+ mst.acc = ms.acc';
+ mst.t = ms.t + start_time;
+ att = calc_heading(mst.t, mst, phins);
+ disp 'RMS Error: ';
+ rms(att.att_error,2)
 
-
-%% Helper functions
-% function to compute 
+ %% Helper functions (could put these in seperate files)
+% function to evatuate f(x) at the current state
  function f = f_x(t,samp,x)
-  we = samp.ang(t,:)';
+  we = interp1(samp.t,samp.ang,t)';
   wb = x(13:15,1);
   xm = x(1:3,1);
   b = x(4:6,1);
@@ -168,11 +198,10 @@ time = ms.t';
  function B = B_dis(A,ts)
    Ald = expm(A*ts);
    arg_sum = zeros(15,15);
-   step = ts/50; %going below 100 does add much value
+   step = ts/50; %going below 100 does add any significant value
    for i = 0:step:ts
        arg_sum = arg_sum + expm(-A*i)*step;
    end
-   
    B = Ald*arg_sum;
  end
  
