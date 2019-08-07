@@ -22,7 +22,7 @@ end
 
 figure
 subplot(311)
-histfit(x(:,1), bins);
+histogram(x(:,1), bins);
 title (str);
 [v,h] = hist(x(:,1),bins);
 yp = 0.8*max(v);
@@ -35,7 +35,7 @@ text(xp,yp, str);
 ylabel 'x';
 
 subplot(312)
-histfit(x(:,2), bins);
+histogram(x(:,2), bins);
 [v,h] = hist(x(:,2),bins);
 yp = 0.8*max(v);
 xp = h(floor(0.8*bins));
@@ -47,7 +47,7 @@ text(xp,yp, str);
 ylabel 'y';
 
 subplot(313)
-histfit(x(:,3), bins);
+histogram(x(:,3), bins);
 [v,h] = hist(x(:,3),bins);
 yp = 0.8*max(v);
 xp = h(floor(0.8*bins));
