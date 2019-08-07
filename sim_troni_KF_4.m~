@@ -1,11 +1,10 @@
-%% OUTDATED: Use exp_troni_KF_4 instead
- % Simulation of Giancarlo's algorithm for estimatating sensor bias without
+%% Simulation of Giancarlo's algorithm for estimatating sensor bias without
  % knowledge of the vehicles true attitude (i.e using angular rates). This
  % builds on sim_troni_KF_3, by adding 3 more states to estimate non
  %-zero angular velocity bias.
  % Method: Extended Kalman Filter
  % 07-03-19:  CREATED by Abhi Shah
- % 08-07-19:  Moved to exp_troni_KF_4 instead
+ % 
 
  %% Notes
   % Seems to work alright.
@@ -176,6 +175,18 @@ ylabel 'bias terms';
 xlabel 'time (s)';
 grid minor;
  
+%  
+% %  %% Display Results
+%  disp 'Computed mean biases:';
+%  b_mean = mean(x(4:6,length(x)-100:length(x))')'
+%  disp 'True bias:';
+%  bias.mag
+%  disp 'Computed mean T matrix:';
+%  Ts = mean(x(7:12,floor(length(x)-100):length(x))');
+%  T_mean = [Ts(1:3)' [Ts(2) Ts(4) Ts(5)]' [Ts(3) Ts(5) Ts(6)]']
+%  disp 'True T matrix:';
+%  bias.T
+
 %% Helper functions
 % function to compute 
  function f = f_x(t,samp,x)
