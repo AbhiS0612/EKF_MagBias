@@ -43,9 +43,17 @@ function out = calc_heading(t,samp,phins)
     out.att_error = wrapTo180(att'*180/pi-phins.att)';
     out.mag_ned = mag;
     %figure;plot(out.mag_ned(1,:),out.mag_ned(2,:),'.');grid on;axis equal;xlabel('x (gaus)');ylabel('y (gaus)');title('Cor Mag - Local Level Plane');
-    pt = taxis(phins.t);
-    figure;plot(taxis(phins.t),out.att_error,'.');grid on;xlabel(tlabel(phins.t));ylabel('degrees');title('Att Error');xlim([pt(1),pt(end)]);ylim([-50,50]);
-    figure;plot(taxis(phins.t),phins.att,'.',taxis(phins.t),out.att*180/pi,'.');grid on;legend('px','py','pz','x','y','z');xlabel(tlabel(phins.t));title('Attitude');xlim([pt(1),pt(end)]);ylim([-200,200]);
+    %pt = taxis(phins.t);
+    
+    
+    %Reformat time
+    phins.t = phins.t - phins.t(1);
+    figure(1);hold on;plot(phins.t,out.att_error(3,:)'.');grid on;xlabel('time (s)');ylabel('degrees');title('Heading Error ($h - \hat{h}$)');xlim([0 3000]);ylim([-60,60]);
+    %figure;plot(phins.t,phins.att,'.',phins.t,out.att*180/pi,'.');grid on;legend('r','p','h','$\hat{r}$','$\hat{p}$','$\hat{h}$');xlabel('time (s)');ylabel('degrees');title('Vehicle Attitude');xlim([0 3000]);ylim([-200,200]);
+    
+    
+    %figure;plot(taxis(phins.t),out.att_error,'.');grid on;xlabel(tlabel(phins.t));ylabel('degrees');title('Att Error');xlim([pt(1),pt(end)]);ylim([-50,50]);
+    %figure;plot(taxis(phins.t),phins.att,'.',taxis(phins.t),out.att*180/pi,'.');grid on;legend('px','py','pz','x','y','z');xlabel(tlabel(phins.t));title('Attitude');xlim([pt(1),pt(end)]);ylim([-200,200]);
     %figure;plot(taxis(samp.t),samp.b);grid on;xlabel(tlabel(samp.t));legend('x','y','z');title('bias');ylabel('gaus');xlim([pt(1),pt(end)]);
     %figure;plot(taxis(samp.t),samp.theta);grid on;legend('a','b','c','d','e','f','a1','a2','a3','btb');xlabel(tlabel(samp.t));title('theta');xlim([pt(1),pt(end)]);
 
