@@ -1,5 +1,7 @@
-# abhi-matlab
+# EKF_MagBias
 
-Requires several addtional files to run properly. These are still to be committed to the repo, is this fixed yet?
+### A complete repository of all the scripts and functions required for the EKF magnetometer bias calibration project. 
 
-Mostly contains files for KF and EKF simulations for the microstrain to estimate soft and hard iron bias terms.
+- To run the code with simulated data, modify gen_samples.m as required. 
+
+- To run the code with experimental data, call the data file using the read_microstrain or read_kvh functions. 
