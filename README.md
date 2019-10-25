@@ -8,4 +8,4 @@
 
 - The folder EKF_data contains all the data used for experimental evaluation as well as some notes and helper functions for readint the data.
 
-- 
+- The folder noise_plots contains analysis of the noise statistics of the LORD Microstrain 3dm-gx5-25 used.
